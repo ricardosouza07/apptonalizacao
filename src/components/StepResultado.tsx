@@ -1,13 +1,16 @@
 import { RECOMENDACOES, calcularMix } from '../data/coloracao';
 import type { Alvo, FundoClareamento } from '../data/coloracao';
+import type { OrigemFundo } from '../data/registros';
+import { CapturaResultado } from './CapturaResultado';
 
 interface Props {
   fundo: FundoClareamento;
   alvo: Alvo;
+  origemFundo: OrigemFundo;
   onReset: () => void;
 }
 
-export function StepResultado({ fundo, alvo, onReset }: Props) {
+export function StepResultado({ fundo, alvo, origemFundo, onReset }: Props) {
   const viavel = fundo.altura >= alvo.fundoMinimo;
 
   const rec = viavel
@@ -204,6 +207,15 @@ export function StepResultado({ fundo, alvo, onReset }: Props) {
           </ul>
         </div>
       )}
+
+      {/* Captura de resultado — feedback de campo (opcional) */}
+      <CapturaResultado
+        fundoAtual={fundo.altura}
+        alvoId={alvo.id}
+        alvoNome={alvo.nome}
+        produtos={rec.produtos.map((p) => p.codigo)}
+        origemFundo={origemFundo}
+      />
 
       <ResetButton onReset={onReset} />
     </div>
