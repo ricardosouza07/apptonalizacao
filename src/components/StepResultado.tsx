@@ -1,4 +1,4 @@
-import { RECOMENDACOES } from '../data/coloracao';
+import { RECOMENDACOES, calcularMix } from '../data/coloracao';
 import type { Alvo, FundoClareamento } from '../data/coloracao';
 
 interface Props {
@@ -17,10 +17,7 @@ export function StepResultado({ fundo, alvo, onReset }: Props) {
   if (!viavel) {
     return (
       <div className="flex flex-col gap-6 px-4 py-6">
-        <div
-          className="rounded-xl p-5"
-          style={{ background: '#2a0e0e', border: '1px solid #5c1a1a' }}
-        >
+        <div className="rounded-xl p-5" style={{ background: '#2a0e0e', border: '1px solid #5c1a1a' }}>
           <p
             className="text-lg font-bold mb-2"
             style={{ fontFamily: "'Saira Condensed', sans-serif", color: '#f87171' }}
@@ -32,13 +29,10 @@ export function StepResultado({ fundo, alvo, onReset }: Props) {
           </p>
           <p className="text-sm mt-3" style={{ color: '#C5C5C2' }}>
             Fundo atual:{' '}
-            <strong style={{ color: '#F5F5F2' }}>
-              {fundo.altura} — {fundo.nome}
-            </strong>
+            <strong style={{ color: '#F5F5F2' }}>{fundo.altura} — {fundo.nome}</strong>
           </p>
           <p className="text-sm mt-1" style={{ color: '#C5C5C2' }}>
-            Fundo mínimo para{' '}
-            <strong style={{ color: '#F5F5F2' }}>{alvo.nome}</strong>:{' '}
+            Fundo mínimo para <strong style={{ color: '#F5F5F2' }}>{alvo.nome}</strong>:{' '}
             <strong style={{ color: '#C8932E' }}>{alvo.fundoMinimo}</strong>
           </p>
         </div>
@@ -50,10 +44,7 @@ export function StepResultado({ fundo, alvo, onReset }: Props) {
   if (!rec) {
     return (
       <div className="flex flex-col gap-6 px-4 py-6">
-        <div
-          className="rounded-xl p-5"
-          style={{ background: '#1a1c2a', border: '1px solid #2a2f4a' }}
-        >
+        <div className="rounded-xl p-5" style={{ background: '#1a1c2a', border: '1px solid #2a2f4a' }}>
           <p
             className="text-lg font-bold mb-2"
             style={{ fontFamily: "'Saira Condensed', sans-serif", color: '#C8932E' }}
@@ -69,14 +60,19 @@ export function StepResultado({ fundo, alvo, onReset }: Props) {
     );
   }
 
+  const isComposta  = rec.produtos.length > 1;
+  const isQuente    = alvo.grupo === 'quente';
+  const mixCalc     = rec.reforcoMix ? calcularMix(fundo.altura) : null;
+
   return (
     <div className="flex flex-col gap-5 px-4 py-6">
+      {/* Cabeçalho */}
       <div className="text-center">
         <p
           className="text-xs uppercase tracking-widest mb-1"
           style={{ color: '#C8932E', fontFamily: "'Saira Condensed', sans-serif" }}
         >
-          Recomendação
+          {isQuente ? 'Tom quente' : 'Neutralização'}
         </p>
         <h1
           className="text-3xl font-bold leading-tight"
@@ -89,17 +85,105 @@ export function StepResultado({ fundo, alvo, onReset }: Props) {
         </p>
       </div>
 
+      {/* Aviso grupo quente */}
+      {isQuente && (
+        <div
+          className="rounded-lg px-3 py-2 text-xs"
+          style={{
+            background: '#1c1505',
+            border: '1px solid #4a3310',
+            color: '#e8c97a',
+            fontFamily: "'Cormorant Garamond', serif",
+            fontStyle: 'italic',
+          }}
+        >
+          Este tom mantém e realça o calor do fio — não neutraliza o fundo residual.
+        </div>
+      )}
+
+      {/* Card principal */}
       <div
         className="rounded-xl p-5 flex flex-col gap-4"
         style={{ background: '#111629', border: '1px solid #1e2340' }}
       >
-        <DataRow label="Produto" value={rec.produto} highlight />
-        <DataRow label="Reflexo" value={rec.reflexo} />
+        {/* Produto(s) */}
+        <div className="flex flex-col gap-2">
+          <span
+            className="text-xs uppercase tracking-wider"
+            style={{ color: '#C5C5C2', fontFamily: "'Saira Condensed', sans-serif" }}
+          >
+            {isComposta ? 'Fórmula composta' : 'Produto'}
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {rec.produtos.map((p, i) => (
+              <span key={i} className="flex items-center gap-2">
+                <span className="flex flex-col">
+                  <span
+                    className="inline-block rounded-lg px-3 py-1.5 font-bold text-base"
+                    style={{
+                      fontFamily: "'Saira Condensed', sans-serif",
+                      background: '#1e2340',
+                      color: '#C8932E',
+                      border: '1px solid #C8932E',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    {p.codigo}
+                  </span>
+                  <span className="text-xs mt-0.5 px-1" style={{ color: '#C5C5C2' }}>
+                    {p.nome}
+                  </span>
+                </span>
+                {isComposta && i < rec.produtos.length - 1 && (
+                  <span
+                    className="text-base font-bold mb-4"
+                    style={{ color: '#C5C5C2' }}
+                  >
+                    +
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+          {isComposta && (
+            <p className="text-xs" style={{ color: '#C5C5C2', fontStyle: 'italic' }}>
+              Misturar em partes iguais antes de aplicar.
+            </p>
+          )}
+        </div>
+
+        <div style={{ borderTop: '1px solid #1e2340' }} />
+
         <DataRow label="Proporção" value={rec.proporcao} />
-        <DataRow label="Oxidante" value={rec.ox} />
-        <DataRow label="Tempo" value={rec.tempo} />
+        <DataRow label="Oxidante"  value={rec.ox} />
+        <DataRow label="Tempo"     value={rec.tempo} />
       </div>
 
+      {/* Reforço opcional — Regra do 11 */}
+      {rec.reforcoMix && mixCalc && (
+        <div
+          className="rounded-xl p-4"
+          style={{ background: '#0d1020', border: '1px solid #2a2f4a' }}
+        >
+          <p
+            className="text-xs uppercase tracking-widest mb-1"
+            style={{ color: '#4a6fa5', fontFamily: "'Saira Condensed', sans-serif" }}
+          >
+            Reforço opcional — Regra do 11
+          </p>
+          <p className="text-sm" style={{ color: '#C5C5C2' }}>
+            Para intensificar:{' '}
+            <strong style={{ color: '#F5F5F2' }}>
+              + {mixCalc.cm}cm ({mixCalc.gramas}g) de {rec.reforcoMix}
+            </strong>
+          </p>
+          <p className="text-xs mt-1" style={{ color: '#888', fontStyle: 'italic' }}>
+            Referência para 30g de coloração. Altura {fundo.altura} + {mixCalc.cm}cm = 11.
+          </p>
+        </div>
+      )}
+
+      {/* Alertas técnicos */}
       {rec.alertas.length > 0 && (
         <div
           className="rounded-xl p-4"
@@ -126,7 +210,7 @@ export function StepResultado({ fundo, alvo, onReset }: Props) {
   );
 }
 
-function DataRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function DataRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-start gap-3">
       <span
@@ -135,10 +219,7 @@ function DataRow({ label, value, highlight }: { label: string; value: string; hi
       >
         {label}
       </span>
-      <span
-        className="text-right text-sm font-semibold"
-        style={{ color: highlight ? '#C8932E' : '#F5F5F2' }}
-      >
+      <span className="text-right text-sm font-semibold" style={{ color: '#F5F5F2' }}>
         {value}
       </span>
     </div>

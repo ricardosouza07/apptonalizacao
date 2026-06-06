@@ -176,7 +176,6 @@ const PROTOCOLO = { proporcao: '1:2', ox: '6 vol (ou 8 vol)', tempo: '15–20 mi
 //
 // GRUPO A — NEUTRALIZAÇÃO
 // Tabela oficial MUP: Altura de Tom × Fundo × Neutralização
-// Produtos confirmados pelos técnicos master Vitor Pinho e Márcio Fiorucci.
 //
 // GRUPO B — TONS QUENTES
 // Deposita calor — NÃO neutraliza fundo. Protocolo idêntico (1:2, 6vol, 15-20min).
