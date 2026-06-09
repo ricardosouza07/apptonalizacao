@@ -54,6 +54,48 @@ export function estimarFundo(alturaNatural: number, tonsClareados: number): { mi
   return { min: clamp(base - 1), max: clamp(base) };
 }
 
+// Pigmento contribuinte por altura de tom (referência MUP)
+export const PIGMENTOS_CONTRIBUINTES: Record<number, string> = {
+  1:  'Vermelho escuro',
+  2:  'Vermelho escuro',
+  3:  'Vermelho escuro',
+  4:  'Vermelho escuro',
+  5:  'Vermelho',
+  6:  'Vermelho-alaranjado',
+  7:  'Laranja',
+  8:  'Amarelo-alaranjado',
+  9:  'Amarelo',
+  10: 'Amarelo claro',
+};
+
+// OX em cabelo com coloração: potencial de clareamento sobre o natural,
+// limitado pela altura da coloração aplicada ("o cinco segura o clareamento").
+export interface OpcaoOxColoracao {
+  id: string;
+  label: string;
+  tonsMin: number; // valor conservador da faixa
+  tonsMax: number; // valor otimista da faixa
+}
+
+export const OPCOES_OX_COLORACAO: OpcaoOxColoracao[] = [
+  { id: 'ox6',  label: 'OX 6 vol (apenas tonaliza, não clareia)', tonsMin: 0, tonsMax: 0 },
+  { id: 'ox20', label: 'OX 20 vol (clareia 1 a 2 tons)',          tonsMin: 1, tonsMax: 2 },
+  { id: 'ox30', label: 'OX 30 vol (clareia 2 a 3 tons)',          tonsMin: 2, tonsMax: 3 },
+  { id: 'ox40', label: 'OX 40 vol (clareia 3 a 4 tons)',          tonsMin: 3, tonsMax: 4 },
+];
+
+// alturaAlcancada = min(corNatural + tonsDoOX, alturaDaColoracaoAplicada)
+export function estimarAlturaAlcancada(
+  corNatural: number,
+  alturaColoracao: number,
+  ox: OpcaoOxColoracao,
+): { min: number; max: number } {
+  const clamp = (n: number) => Math.max(1, Math.min(10, n));
+  const min = clamp(Math.min(corNatural + ox.tonsMin, alturaColoracao));
+  const max = clamp(Math.min(corNatural + ox.tonsMax, alturaColoracao));
+  return { min: Math.min(min, max), max: Math.max(min, max) };
+}
+
 // ─── UTILITÁRIO — REGRA DO 11 ────────────────────────────────────────────────
 
 // Para cada 30g de coloração. Regra: altura + cm de Mix = 11.
