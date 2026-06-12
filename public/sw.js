@@ -1,4 +1,4 @@
-const CACHE = 'fenipro-v2';
+const CACHE = 'fenipro-v3';
 const ASSETS = ['/'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
