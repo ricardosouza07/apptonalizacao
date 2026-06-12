@@ -34,7 +34,21 @@ export interface Recomendacao {
   alertas: string[];
 }
 
-// ─── ESTIMADOR DE FUNDO ──────────────────────────────────────────────────────
+export interface OpcaoOxColoracao {
+  id: string;
+  label: string;
+  tons: number; // tons efetivos de clareamento sobre cabelo não descolorido
+  descricao: string;
+}
+
+export const OPCOES_OX_COLORACAO: OpcaoOxColoracao[] = [
+  { id: 'ox6',  label: 'OX 6 vol',  tons: 0, descricao: 'Não clareia — apenas tonaliza (deposita cor)' },
+  { id: 'ox20', label: 'OX 20 vol', tons: 2, descricao: 'Abre até 2 tons sobre o natural' },
+  { id: 'ox30', label: 'OX 30 vol', tons: 3, descricao: 'Abre até 3 tons sobre o natural' },
+  { id: 'ox40', label: 'OX 40 vol', tons: 4, descricao: 'Abre até 4 tons sobre o natural' },
+];
+
+
 
 export interface OpcaoClareamento {
   id: string;
