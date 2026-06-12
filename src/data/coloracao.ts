@@ -18,8 +18,9 @@ export interface Alvo {
 }
 
 export interface Produto {
-  codigo: string;  // ex: "8.2", "/99", "12.12"
-  nome: string;    // nome comercial exato da cartela MUP
+  codigo: string;     // ex: "8.2", "/99", "12.12"
+  nome: string;       // nome comercial exato da cartela MUP
+  gramatura?: string; // ex: "60g", "7g" — exibida quando a fórmula tem gramaturas distintas
 }
 
 export interface Recomendacao {
@@ -50,50 +51,8 @@ export const OPCOES_CLAREAMENTO: OpcaoClareamento[] = [
 
 export function estimarFundo(alturaNatural: number, tonsClareados: number): { min: number; max: number } {
   const base = Math.round(alturaNatural + tonsClareados);
-  const clamp = (n: number) => Math.max(5, Math.min(10, n));
+  const clamp = (n: number) => Math.max(4, Math.min(10, n));
   return { min: clamp(base - 1), max: clamp(base) };
-}
-
-// Pigmento contribuinte por altura de tom (referência MUP)
-export const PIGMENTOS_CONTRIBUINTES: Record<number, string> = {
-  1:  'Vermelho escuro',
-  2:  'Vermelho escuro',
-  3:  'Vermelho escuro',
-  4:  'Vermelho escuro',
-  5:  'Vermelho',
-  6:  'Vermelho-alaranjado',
-  7:  'Laranja',
-  8:  'Amarelo-alaranjado',
-  9:  'Amarelo',
-  10: 'Amarelo claro',
-};
-
-// OX em cabelo com coloração: potencial de clareamento sobre o natural,
-// limitado pela altura da coloração aplicada ("o cinco segura o clareamento").
-export interface OpcaoOxColoracao {
-  id: string;
-  label: string;
-  tonsMin: number; // valor conservador da faixa
-  tonsMax: number; // valor otimista da faixa
-}
-
-export const OPCOES_OX_COLORACAO: OpcaoOxColoracao[] = [
-  { id: 'ox6',  label: 'OX 6 vol (apenas tonaliza, não clareia)', tonsMin: 0, tonsMax: 0 },
-  { id: 'ox20', label: 'OX 20 vol (clareia 1 a 2 tons)',          tonsMin: 1, tonsMax: 2 },
-  { id: 'ox30', label: 'OX 30 vol (clareia 2 a 3 tons)',          tonsMin: 2, tonsMax: 3 },
-  { id: 'ox40', label: 'OX 40 vol (clareia 3 a 4 tons)',          tonsMin: 3, tonsMax: 4 },
-];
-
-// alturaAlcancada = min(corNatural + tonsDoOX, alturaDaColoracaoAplicada)
-export function estimarAlturaAlcancada(
-  corNatural: number,
-  alturaColoracao: number,
-  ox: OpcaoOxColoracao,
-): { min: number; max: number } {
-  const clamp = (n: number) => Math.max(1, Math.min(10, n));
-  const min = clamp(Math.min(corNatural + ox.tonsMin, alturaColoracao));
-  const max = clamp(Math.min(corNatural + ox.tonsMax, alturaColoracao));
-  return { min: Math.min(min, max), max: Math.max(min, max) };
 }
 
 // ─── UTILITÁRIO — REGRA DO 11 ────────────────────────────────────────────────
@@ -117,7 +76,8 @@ export function calcularMix(alturaCor: number): { cm: number; gramas: number } {
 // ─── FUNDOS DE CLAREAMENTO ───────────────────────────────────────────────────
 
 export const FUNDOS: FundoClareamento[] = [
-  { altura: 5,  nome: 'Castanho claro',    fundo: 'Vermelho-alaranjado', corHex: '#B03A2E' },
+  { altura: 4,  nome: 'Castanho médio',    fundo: 'Vermelho escuro',     corHex: '#8B2500' },
+  { altura: 5,  nome: 'Castanho claro',    fundo: 'Vermelho',            corHex: '#B03A2E' },
   { altura: 6,  nome: 'Louro escuro',      fundo: 'Vermelho-alaranjado', corHex: '#C84A28' },
   { altura: 7,  nome: 'Louro médio',       fundo: 'Laranja',             corHex: '#D4622A' },
   { altura: 8,  nome: 'Louro claro',       fundo: 'Amarelo-alaranjado',  corHex: '#D4A030' },
@@ -125,7 +85,69 @@ export const FUNDOS: FundoClareamento[] = [
   { altura: 10, nome: 'Louro claríssimo',  fundo: 'Amarelo claro',       corHex: '#F0EDB8' },
 ];
 
-// ─── ALVOS ───────────────────────────────────────────────────────────────────
+// ─── TEMPERATURA DA COR E RESULTADO ESPERADO ────────────────────────────────
+
+export type TemperaturaCor = 'fria' | 'natural' | 'quente';
+
+export interface ResultadoEsperado {
+  temperatura: TemperaturaCor;
+  label: string;
+  aviso?: string; // cor mais clara que o fundo
+}
+
+export function classificarTemperatura(produtos: Produto[]): TemperaturaCor {
+  // /99 (Verde Mix) é neutralizante — fórmula fria independente do restante
+  if (produtos.some(p => p.codigo.includes('/99'))) return 'fria';
+  const temps = produtos.map(p => {
+    const c = p.codigo;
+    if (c.startsWith('/')) return 'fria';       // qualquer Mix neutralizante
+    if (c.endsWith('L')) return 'quente';        // Série Luminosa
+    const dot = c.indexOf('.');
+    if (dot === -1) return 'natural';
+    const suffix = c.slice(dot + 1);
+    if (suffix === '0') return 'natural';
+    if (suffix === '1' || suffix === '2' || suffix === '12') return 'fria';
+    // .3, .4, .34, .43, .37, .35, .73 e outros → quente
+    return 'quente';
+  });
+  if (temps.includes('fria')) return 'fria';
+  if (temps.includes('quente')) return 'quente';
+  return 'natural';
+}
+
+function extrairAlturaCor(produtos: Produto[]): number | null {
+  for (const p of produtos) {
+    if (p.codigo.startsWith('/')) continue;
+    const m = p.codigo.match(/^(\d+)/);
+    if (m) return parseInt(m[1], 10);
+  }
+  return null;
+}
+
+export function calcularResultadoEsperado(
+  produtos: Produto[],
+  fundoAltura: number,
+): ResultadoEsperado {
+  const temperatura = classificarTemperatura(produtos);
+
+  const labels: Record<TemperaturaCor, string> = {
+    fria:    'Resultado esperado: neutro / frio',
+    natural: 'Resultado esperado: levemente quente',
+    quente:  'Resultado esperado: quente — somatória com o fundo',
+  };
+
+  const alturaCorPrincipal = extrairAlturaCor(produtos);
+  let aviso: string | undefined;
+  if (alturaCorPrincipal !== null && alturaCorPrincipal < fundoAltura) {
+    aviso =
+      `Cor ${alturaCorPrincipal} aplicada sobre fundo ${fundoAltura} — ` +
+      'pigmento insuficiente para neutralizar. Resultado imprevisível.';
+  }
+
+  return { temperatura, label: labels[temperatura], aviso };
+}
+
+
 
 export const ALVOS: Alvo[] = [
   // Grupo A — Neutralização (resultado frio/neutro)
@@ -133,7 +155,7 @@ export const ALVOS: Alvo[] = [
     id: 'morena_iluminada',
     nome: 'Morena iluminada',
     grupo: 'neutralizacao',
-    fundoMinimo: 6,
+    fundoMinimo: 4,
     descricao: 'Cinza + Verde — neutraliza fundo vermelho-alaranjado',
   },
   {
@@ -230,18 +252,43 @@ export const RECOMENDACOES: Recomendacao[] = [
   //  GRUPO A — NEUTRALIZAÇÃO
   // ══════════════════════════════════════════════════════════════════════
 
-  // ── morena_iluminada (fundo mín. 6) ──────────────────────────────────
+  // ── morena_iluminada (fundo mín. 4) ──────────────────────────────────
 
   {
-    fundoAtual: 6, alvoId: 'morena_iluminada',
+    fundoAtual: 4, alvoId: 'morena_iluminada',
     produtos: [
-      { codigo: '6.1', nome: 'Louro Escuro Cinza' },
-      { codigo: '/99', nome: 'Verde (Mix)' },
+      { codigo: '4.0', nome: 'Castanho Médio Natural', gramatura: '60g' },
+      { codigo: '/99', nome: 'Verde (Mix)',             gramatura: '7g'  },
     ],
     ...PROTOCOLO,
     reforcoMix: '/99 Verde',
     alertas: [
-      'Fórmula composta — misturar 6.1 e /99 em partes iguais.',
+      'Fundo vermelho escuro — requer Verde (/99) para neutralizar o vermelho profundo.',
+      'Tempo visual — acompanhe a cada 5 minutos.',
+    ],
+  },
+  {
+    fundoAtual: 5, alvoId: 'morena_iluminada',
+    produtos: [
+      { codigo: '5.0', nome: 'Castanho Claro Natural', gramatura: '60g' },
+      { codigo: '/99', nome: 'Verde (Mix)',             gramatura: '6g'  },
+    ],
+    ...PROTOCOLO,
+    reforcoMix: '/99 Verde',
+    alertas: [
+      'Fundo vermelho — neutralização com Verde (/99).',
+      'Tempo visual — acompanhe a cada 5 minutos.',
+    ],
+  },
+  {
+    fundoAtual: 6, alvoId: 'morena_iluminada',
+    produtos: [
+      { codigo: '6.1', nome: 'Louro Escuro Cinza', gramatura: '60g' },
+      { codigo: '/99', nome: 'Verde (Mix)',         gramatura: '5g'  },
+    ],
+    ...PROTOCOLO,
+    reforcoMix: '/99 Verde',
+    alertas: [
       'Fundo vermelho-alaranjado exige neutralização composta: cinza (azul) + verde.',
       'Tempo visual — acompanhe a cada 5 minutos.',
     ],
@@ -311,13 +358,13 @@ export const RECOMENDACOES: Recomendacao[] = [
   {
     fundoAtual: 8, alvoId: 'loiro_perola',
     produtos: [
-      { codigo: '8.1', nome: 'Louro Claro Cinza' },
-      { codigo: '8.2', nome: 'Louro Claro Violeta' },
+      { codigo: '8.1', nome: 'Louro Claro Cinza',   gramatura: '45g' },
+      { codigo: '8.2', nome: 'Louro Claro Violeta',  gramatura: '15g' },
     ],
     ...PROTOCOLO,
     reforcoMix: '/12 Pérola',
     alertas: [
-      'Fórmula composta — misturar 8.1 e 8.2 em partes iguais.',
+      'Fórmula composta — 8.1 (45g) + 8.2 (15g).',
       'Fundo amarelo-alaranjado exige neutralização composta: azul (cinza) + violeta.',
       'Não ultrapassar o tempo — risco de esverdear.',
     ],

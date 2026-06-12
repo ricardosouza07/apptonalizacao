@@ -1,6 +1,7 @@
-import { RECOMENDACOES, calcularMix } from '../data/coloracao';
+import { RECOMENDACOES, calcularMix, calcularResultadoEsperado } from '../data/coloracao';
 import type { Alvo, FundoClareamento } from '../data/coloracao';
 import type { OrigemFundo } from '../data/registros';
+import type { ResultadoEsperado } from '../data/coloracao';
 import { CapturaResultado } from './CapturaResultado';
 
 interface Props {
@@ -63,9 +64,10 @@ export function StepResultado({ fundo, alvo, origemFundo, onReset }: Props) {
     );
   }
 
-  const isComposta  = rec.produtos.length > 1;
-  const isQuente    = alvo.grupo === 'quente';
-  const mixCalc     = rec.reforcoMix ? calcularMix(fundo.altura) : null;
+  const isComposta     = rec.produtos.length > 1;
+  const isQuente       = alvo.grupo === 'quente';
+  const mixCalc        = rec.reforcoMix ? calcularMix(fundo.altura) : null;
+  const resultadoEsp   = calcularResultadoEsperado(rec.produtos, fundo.altura);
 
   return (
     <div className="flex flex-col gap-5 px-4 py-6">
@@ -135,6 +137,11 @@ export function StepResultado({ fundo, alvo, origemFundo, onReset }: Props) {
                   </span>
                   <span className="text-xs mt-0.5 px-1" style={{ color: '#C5C5C2' }}>
                     {p.nome}
+                    {p.gramatura && (
+                      <span className="ml-1 font-semibold" style={{ color: '#C8932E' }}>
+                        {p.gramatura}
+                      </span>
+                    )}
                   </span>
                 </span>
                 {isComposta && i < rec.produtos.length - 1 && (
@@ -148,7 +155,7 @@ export function StepResultado({ fundo, alvo, origemFundo, onReset }: Props) {
               </span>
             ))}
           </div>
-          {isComposta && (
+          {isComposta && !rec.produtos.some((p) => p.gramatura) && (
             <p className="text-xs" style={{ color: '#C5C5C2', fontStyle: 'italic' }}>
               Misturar em partes iguais antes de aplicar.
             </p>
@@ -161,6 +168,9 @@ export function StepResultado({ fundo, alvo, origemFundo, onReset }: Props) {
         <DataRow label="Oxidante"  value={rec.ox} />
         <DataRow label="Tempo"     value={rec.tempo} />
       </div>
+
+      {/* Resultado esperado */}
+      <ResultadoEsperadoBlock resultado={resultadoEsp} />
 
       {/* Reforço opcional — Regra do 11 */}
       {rec.reforcoMix && mixCalc && (
@@ -234,6 +244,40 @@ function DataRow({ label, value }: { label: string; value: string }) {
       <span className="text-right text-sm font-semibold" style={{ color: '#F5F5F2' }}>
         {value}
       </span>
+    </div>
+  );
+}
+
+const RESULTADO_ESTILOS = {
+  fria:    { bg: '#071a10', border: '#1a5c30', labelColor: '#4ade80', icon: '✓' },
+  natural: { bg: '#1a1505', border: '#5c4a10', labelColor: '#facc15', icon: '⚠' },
+  quente:  { bg: '#1a0e05', border: '#7a3010', labelColor: '#fb923c', icon: '⚠' },
+};
+
+function ResultadoEsperadoBlock({ resultado }: { resultado: ResultadoEsperado }) {
+  const est = RESULTADO_ESTILOS[resultado.temperatura];
+  return (
+    <div
+      className="rounded-xl p-4 flex flex-col gap-2"
+      style={{ background: est.bg, border: `1px solid ${est.border}` }}
+    >
+      <p
+        className="text-xs uppercase tracking-widest"
+        style={{ color: est.labelColor, fontFamily: "'Saira Condensed', sans-serif" }}
+      >
+        Resultado esperado
+      </p>
+      <p className="text-sm font-semibold" style={{ color: est.labelColor }}>
+        {est.icon} {resultado.label}
+      </p>
+      {resultado.aviso && (
+        <p
+          className="text-xs mt-1"
+          style={{ color: '#f87171', fontStyle: 'italic', borderTop: `1px solid ${est.border}`, paddingTop: 8 }}
+        >
+          ⚠ {resultado.aviso}
+        </p>
+      )}
     </div>
   );
 }
